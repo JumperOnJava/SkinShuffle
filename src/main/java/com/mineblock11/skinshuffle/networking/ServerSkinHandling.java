@@ -21,11 +21,9 @@
 package com.mineblock11.skinshuffle.networking;
 
 import com.mineblock11.skinshuffle.SkinShuffle;
-import com.mineblock11.skinshuffle.api.MojangSkinAPI;
+import com.mineblock11.skinshuffle.client.config.SkinShuffleConfig;
 import com.mineblock11.skinshuffle.util.SkinShufflePlayer;
 import com.mojang.authlib.properties.Property;
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.*;
 import net.minecraft.network.PacketByteBuf;
@@ -75,9 +73,11 @@ public class ServerSkinHandling {
         LOCKED_PLAYERS.add(uuidAsString);
         CURRENTLY_REFRESHING.add(uuidAsString);
 
+        var mojangApi = SkinShuffleConfig.get().getUploadSkinAPI();
+
         responseSender.sendPacket(SkinShuffle.id("reset_cooldown"), PacketByteBufs.empty());
 
-        var result = MojangSkinAPI.getPlayerSkinTexture(uuidAsString);
+        var result = mojangApi.getPlayerSkinTexture(uuidAsString);
         SkinShuffle.LOGGER.info("recieved packet");
         Property skinData = result.toProperty();
 

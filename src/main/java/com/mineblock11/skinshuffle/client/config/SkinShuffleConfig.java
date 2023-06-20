@@ -22,27 +22,28 @@ package com.mineblock11.skinshuffle.client.config;
 
 import com.google.gson.GsonBuilder;
 import com.mineblock11.skinshuffle.SkinShuffle;
+import com.mineblock11.skinshuffle.api.MineSkinUpload;
+import com.mineblock11.skinshuffle.api.MojangApiImpl;
+import com.mineblock11.skinshuffle.api.MojangApi;
+import com.mineblock11.skinshuffle.client.skinsetter.MojangSkinSetter;
+import com.mineblock11.skinshuffle.client.skinsetter.SkinSetter;
+import com.mineblock11.skinshuffle.client.skinsetter.SkinsRestorerSetter;
 import dev.isxander.yacl3.api.ConfigCategory;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.YetAnotherConfigLib;
-import dev.isxander.yacl3.api.controller.BooleanControllerBuilder;
 import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
 import dev.isxander.yacl3.api.controller.FloatSliderControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import dev.isxander.yacl3.config.ConfigEntry;
 import dev.isxander.yacl3.config.GsonConfigInstance;
-import dev.isxander.yacl3.gui.controllers.slider.FloatSliderController;
-import dev.isxander.yacl3.impl.controller.BooleanControllerBuilderImpl;
-import dev.isxander.yacl3.impl.controller.FloatSliderControllerBuilderImpl;
+import dev.isxander.yacl3.impl.controller.CyclingListControllerBuilderImpl;
+import dev.isxander.yacl3.impl.controller.StringControllerBuilderImpl;
 import net.minecraft.text.Text;
-import org.apache.commons.lang3.StringUtils;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
+import java.util.Map;
 
 import static net.minecraft.text.Text.*;
 
@@ -127,7 +128,31 @@ public class SkinShuffleConfig {
                             .description(OptionDescription.createBuilder().text(translatable("skinshuffle.config.popups.cooldown_toast.description")).build())
                             .binding(defaults.disableCooldownToast, () -> config.disableCooldownToast, val -> config.disableCooldownToast = val)
                             .controller(TickBoxControllerBuilder::create).build();
-
+                    //API Options
+                    var mojangApi = Option.<String>createBuilder()
+                            .name(translatable("skinshuffle.config.api.apiimpl.name"))
+                            .description(OptionDescription.createBuilder().text(translatable("skinshuffle.config.api.apiimpl.description")).build())
+                            .binding(defaults.mojangApiImpl,() -> config.mojangApiImpl, val -> config.mojangApiImpl = val)
+                            .controller(opt ->
+                                    new CyclingListControllerBuilderImpl<>(opt)
+                                            .values(skinUploadAPIS.keySet())
+                                            .valueFormatter(s -> translatable("skinshuffle.config.api.apiimpl."+s)))
+                            .build();
+                    var uploadApiKey = Option.<String>createBuilder()
+                            .name(translatable("skinshuffle.config.api.key.name"))
+                            .description(OptionDescription.createBuilder().text(translatable("skinshuffle.config.api.key.description")).build())
+                            .controller(StringControllerBuilderImpl::new)
+                            .binding(defaults.apiKey,()-> config.apiKey, val -> config.apiKey = val)
+                            .build();
+                    var setter = Option.<String>createBuilder()
+                            .name(translatable("skinshuffle.config.api.skinsetter.name"))
+                            .description(OptionDescription.createBuilder().text(translatable("skinshuffle.config.api.skinsetter.description")).build())
+                            .binding(defaults.skinSetterName,() -> config.skinSetterName, val -> config.skinSetterName = val)
+                            .controller(opt ->
+                                    new CyclingListControllerBuilderImpl<>(opt)
+                                    .values(skinSetters.keySet())
+                                    .valueFormatter(s -> translatable("skinshuffle.config.api.skinsetter."+s)))
+                            .build();
                     return builder
                             .title(translatable("skinshuffle.config.title"))
                             .category(ConfigCategory.createBuilder()
@@ -139,11 +164,17 @@ public class SkinShuffleConfig {
                                     .name(translatable("skinshuffle.config.popups.title"))
                                     .tooltip(translatable("skinshuffle.config.popups.description"))
                                     .options(List.of(disableCoolToast, disableInstToast))
-                                    .build());
+                                    .build()
+                            ).category(ConfigCategory.createBuilder()
+                                    .name(translatable("skinshuffle.config.api.title"))
+                                    .tooltip(translatable("skinshuffle.config.api.desctiption"))
+                                    .options(List.of(mojangApi,uploadApiKey,setter))
+                                    .build()
+                            )/**/;
                 }
         );
     }
-
+    //public static final List<UploadSkinApi> uploadSkinApiList = new ArrayList<>(List.of(new MojangSkinAPI(),new MineSkinApi()));
     @ConfigEntry public boolean disableInstalledToast = false;
     @ConfigEntry public boolean disableCooldownToast = false;
 
@@ -157,6 +188,19 @@ public class SkinShuffleConfig {
     @ConfigEntry public SkinRenderStyle presetEditScreenRenderStyle = SkinRenderStyle.ROTATION;
     @ConfigEntry public float rotationMultiplier = 1.0f;
 
+    @ConfigEntry public String mojangApiImpl = "mojang";
+    private static final Map<String, MojangApi> skinUploadAPIS = Map.of("mojang",new MojangApiImpl(),"mineskin",new MineSkinUpload());
+    public MojangApi getUploadSkinAPI() {
+        return skinUploadAPIS.get(mojangApiImpl);
+    }
+
+    @ConfigEntry public String skinSetterName = "mojang";
+    private static final Map<String, SkinSetter> skinSetters = Map.of("mojang",new MojangSkinSetter(),"skinsrestorer",new SkinsRestorerSetter());
+    public SkinSetter getSkinSetter() {
+        return skinSetters.get(skinSetterName);
+    }
+
+    @ConfigEntry public String apiKey = "";
     public enum SkinRenderStyle {
         ROTATION,
         CURSOR

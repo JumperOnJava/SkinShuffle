@@ -21,8 +21,8 @@
 package com.mineblock11.skinshuffle.client.skin;
 
 import com.mineblock11.skinshuffle.SkinShuffle;
-import com.mineblock11.skinshuffle.api.MojangSkinAPI;
 import com.mineblock11.skinshuffle.api.SkinQueryResult;
+import com.mineblock11.skinshuffle.client.config.SkinShuffleConfig;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.client.texture.AbstractTexture;
@@ -49,9 +49,11 @@ public class UsernameSkin extends UUIDSkin {
 
     @Override
     public ConfigSkin saveToConfig() {
-        Optional<UUID> uuid = MojangSkinAPI.getUUIDFromUsername(this.username);
+        var mojangApi = SkinShuffleConfig.get().getUploadSkinAPI();
+
+        Optional<UUID> uuid = mojangApi.getUUIDFromUsername(this.username);
         if(uuid.isEmpty()) throw new RuntimeException("UUID is not a valid player UUID.");
-        SkinQueryResult queryResult = MojangSkinAPI.getPlayerSkinTexture(uuid.get().toString());
+        SkinQueryResult queryResult = mojangApi.getPlayerSkinTexture(uuid.get().toString());
         this.url = queryResult.skinURL();
         return super.saveToConfig();
     }
@@ -63,7 +65,9 @@ public class UsernameSkin extends UUIDSkin {
 
     @Override
     protected @Nullable AbstractTexture loadTexture(Runnable completionCallback) {
-        var uuid = MojangSkinAPI.getUUIDFromUsername(username);
+        var mojangApi = SkinShuffleConfig.get().getUploadSkinAPI();
+
+        var uuid = mojangApi.getUUIDFromUsername(username);
 
         if (uuid.isPresent()) {
             this.uuid = uuid.get();

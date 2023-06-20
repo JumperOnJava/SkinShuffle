@@ -48,6 +48,21 @@ skinshuffle:
       display_pause_screen:
         name: "Display Widget In Pause Screen"
         description: "Should the currently selected skin preset and the skin preset button be shown on the pause screen?"
+    api:
+      title: "API settings"
+      apiimpl:
+        name: "Api Implementation"
+        description: "Mojang api implementation. Mojang is official, MineSkin implementation uploads skin through mineskin.org api and may be used in offline mode (sus)"
+        mojang: "Mojang"
+        mineskin: "MineSkin"
+      key:
+        name: "Api key"
+        description: "API key for api implementation. Not required for Mojang API"
+      skinsetter:
+        name: "Skin installing method"
+        description: "Allows you to change skin installing method. Mojang can be used on any server but requires relog. SkinsRestorer can be used on any server with plugin of the same name and allows you to hotswap skin without relog. FabricTailor is same as SkinsRestorer but for FabricTailor mod"
+        mojang: "Mojang"
+        skinsrestorer: "SkinsRestorer"
   handshake:
     toast:
       title: "SkinShuffle isn't installed on the server."
@@ -65,6 +80,10 @@ skinshuffle:
     toast:
       title: "SkinShuffle cannot apply your skin."
       message: "You are not authenticated, your skin will only be visible to you."
+  serverplugin:
+    toast:
+      title: "SkinShuffle cannot apply your skin."
+      message: "SkinsRestorer/Fabrictailor skin can be installed only on server"
   button: "Skin Presets"
   carousel:
     title: "Skin Presets"

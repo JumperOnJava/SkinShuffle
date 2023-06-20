@@ -25,20 +25,19 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mineblock11.skinshuffle.SkinShuffle;
+import com.mineblock11.skinshuffle.client.config.SkinShuffleConfig;
 import com.mineblock11.skinshuffle.mixin.accessor.MinecraftClientAccessor;
 import com.mineblock11.skinshuffle.mixin.accessor.MinecraftClientAuthAccessor;
 import com.mineblock11.skinshuffle.mixin.accessor.YggdrasilUserApiServiceAccessor;
 import com.mineblock11.skinshuffle.util.AuthUtil;
 import com.mineblock11.skinshuffle.util.SkinCacheRegistry;
 import com.mojang.authlib.minecraft.UserApiService;
-import com.mojang.authlib.yggdrasil.YggdrasilUserApiService;
 import com.mojang.util.UUIDTypeAdapter;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.Uuids;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -48,48 +47,17 @@ import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 
-public class MojangSkinAPI {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+public class MojangApiImpl implements MojangApi {
+    protected static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    /**
-     * Set the player's skin texture from a URL.
-     * @param skinURL The URL of the skin texture.
-     * @param model The skin model type.
-     */
-    public static void setSkinTexture(String skinURL, String model) {
-        UserApiService service = ((MinecraftClientAccessor) MinecraftClient.getInstance()).getUserApiService();
-
-        if (service instanceof YggdrasilUserApiService apiService) {
-            try {
-                com.mojang.authlib.minecraft.client.MinecraftClient client = ((YggdrasilUserApiServiceAccessor) apiService).getMinecraftClient();
-                String token = ((MinecraftClientAuthAccessor) client).getAccessToken();
-
-                JsonObject obj = new JsonObject();
-                obj.addProperty("variant", model.equals("default") ? "classic" : "slim");
-                obj.addProperty("url", skinURL);
-                var result = Unirest.post("https://api.minecraftservices.com/minecraft/profile/skins")
-                        .body(GSON.toJson(obj))
-                        .contentType("application/json")
-                        .header("Authorization", "Bearer " + token).asString().getBody();
-                SkinShuffle.LOGGER.info("Set player skin: " + skinURL);
-            } catch (Exception e) {
-                throw new RuntimeException("Cannot connect to Mojang API.", e);
-            }
-        } else {
-            throw new RuntimeException("Cannot connect to Mojang API - offline mode is active.");
-        }
-
-        if(MinecraftClient.getInstance().world != null) {
-            ClientPlayNetworking.send(SkinShuffle.id("preset_changed"), PacketByteBufs.empty());
-        }
-    }
 
     /**
      * Get the player's skin texture.
      * @return Is a default skin? Skin URL, Model Type
      * @param uuid
      */
-    public static SkinQueryResult getPlayerSkinTexture(String uuid) {
+    @Override
+    public SkinQueryResult getPlayerSkinTexture(String uuid) {
         try {
             String jsonResponse = Unirest.get("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid + "?unsigned=false")
                     .asString().getBody();
@@ -153,12 +121,8 @@ public class MojangSkinAPI {
         }
     }
 
-    /**
-     * Get the player's uuid using their username.
-     * @return An Optional containing the UUID of the provided username, or an empty Optional if the username is invalid.
-     * @param username
-     */
-    public static Optional<UUID> getUUIDFromUsername(String username) {
+    @Override
+    public Optional<UUID> getUUIDFromUsername(String username) {
         try {
             String jsonResponse = Unirest.get("https://api.mojang.com/users/profiles/minecraft/" + username)
                     .asString().getBody();
@@ -179,53 +143,69 @@ public class MojangSkinAPI {
     }
 
     /**
+     * Get the player's uuid using their username.
+     * @return An Optional containing the UUID of the provided username, or an empty Optional if the username is invalid.
+     * @param username
+     */
+    /**
      * Set a skin texture from a file - will use URL if file has not been modified since previous upload.
      * @param skinFile The file to upload.
      * @param model The type of skin model.
      */
-    public static void setSkinTexture(File skinFile, String model) {
-        UserApiService service = ((MinecraftClientAccessor) MinecraftClient.getInstance()).getUserApiService();
-
+    @Override
+    public void setSkinTexture(File skinFile, String model) {
+        var skinsetter = SkinShuffleConfig.get().getSkinSetter();
         try {
             var cachedURL = SkinCacheRegistry.getCachedUploadedSkin(skinFile);
             if (cachedURL != null) {
-                setSkinTexture(cachedURL, model);
+                skinsetter.setSkinTexture(cachedURL, model);
                 return;
             }
         } catch (IOException e) {
             SkinShuffle.LOGGER.error("Failed to hash file.");
             return;
         }
+        var uploadUrl = uploadSkin(skinFile,model);
+        try{
+            SkinCacheRegistry.saveUploadedSkin(skinFile, uploadUrl);
+        }catch (Exception e){
+            SkinShuffle.LOGGER.info("Failed to upload skin:");
+            SkinShuffle.LOGGER.info(e.getMessage());
+        }
+        skinsetter.setSkinTexture(uploadUrl,model);
 
+    }
+
+    protected String uploadSkin(File skinFile, String model) {
+        if(0==0)
+            throw new RuntimeException("safe");
+        UserApiService service = ((MinecraftClientAccessor) MinecraftClient.getInstance()).getUserApiService();
         if (AuthUtil.isLoggedIn()) {
-            try {
-                com.mojang.authlib.minecraft.client.MinecraftClient client = ((YggdrasilUserApiServiceAccessor) service).getMinecraftClient();
-                String token = ((MinecraftClientAuthAccessor) client).getAccessToken();
+            com.mojang.authlib.minecraft.client.MinecraftClient client = ((YggdrasilUserApiServiceAccessor) service).getMinecraftClient();
+            String token = ((MinecraftClientAuthAccessor) client).getAccessToken();
 
-                HttpResponse<String> response = Unirest.post("https://api.minecraftservices.com/minecraft/profile/skins")
-                        .header("Authorization", "Bearer " + token)
-                        .field("variant", model.equals("default") ? "classic" : "slim")
-                        .field("file", skinFile)
-                        .asString();
-                JsonObject responseObject = GSON.fromJson(response.getBody(), JsonObject.class);
-                String skinURL = responseObject
-                        .get("skins").getAsJsonArray()
-                        .get(0).getAsJsonObject()
-                        .get("url").getAsString();
+            HttpResponse<String> response = Unirest.post("https://api.minecraftservices.com/minecraft/profile/skins")
+                    .header("Authorization", "Bearer " + token)
+                    .field("variant", model.equals("default") ? "classic" : "slim")
+                    .field("file", skinFile)
+                    .asString();
+            JsonObject responseObject = GSON.fromJson(response.getBody(), JsonObject.class);
+            String skinURL = responseObject
+                    .get("skins").getAsJsonArray()
+                    .get(0).getAsJsonObject()
+                    .get("url").getAsString();
 
-                SkinCacheRegistry.saveUploadedSkin(skinFile, skinURL);
 
-                if(MinecraftClient.getInstance().world != null) {
-                    ClientPlayNetworking.send(SkinShuffle.id("preset_changed"), PacketByteBufs.create().writeString(skinURL));
-                }
-
-                SkinShuffle.LOGGER.info("Uploaded texture: " + skinURL);
-                SkinShuffle.LOGGER.info("Set player skin: " + skinURL);
-            } catch (Exception e) {
-                SkinShuffle.LOGGER.error(e.getMessage());
+            if (MinecraftClient.getInstance().world != null) {
+                ClientPlayNetworking.send(SkinShuffle.id("preset_changed"), PacketByteBufs.create().writeString(skinURL));
             }
+
+            SkinShuffle.LOGGER.info("Uploaded texture: " + skinURL);
+            SkinShuffle.LOGGER.info("Set player skin: " + skinURL);
+            return skinURL;
+
         } else {
-            SkinShuffle.LOGGER.error("Cannot connect to Mojang API.");
+            throw new RuntimeException("Cannot connect to Mojang API.");
         }
     }
 }
