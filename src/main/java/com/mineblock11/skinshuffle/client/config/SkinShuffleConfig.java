@@ -196,9 +196,6 @@ public class SkinShuffleConfig {
 
     @ConfigEntry public String skinSetterName = "mojang";
     private static final Map<String, SkinSetter> skinSetters = Map.of("mojang",new MojangSkinSetter(),"skinsrestorer",new SkinsRestorerSetter());
-    public SkinSetter getSkinSetter() {
-        return skinSetters.get(skinSetterName);
-    }
 
     @ConfigEntry public String apiKey = "";
     public enum SkinRenderStyle {

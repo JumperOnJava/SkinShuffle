@@ -25,6 +25,7 @@ import com.mineblock11.skinshuffle.SkinShuffle;
 import com.mineblock11.skinshuffle.client.preset.SkinPreset;
 import com.mineblock11.skinshuffle.client.skin.ConfigSkin;
 import com.mineblock11.skinshuffle.client.skin.UrlSkin;
+import com.mineblock11.skinshuffle.compat.ServerSideSkinCommand.CommandCheck;
 import com.mineblock11.skinshuffle.networking.ClientSkinHandling;
 import com.mineblock11.skinshuffle.util.AuthUtil;
 import com.mineblock11.skinshuffle.util.ToastHelper;
@@ -171,7 +172,7 @@ public class SkinPresetManager {
     public static void apply() {
         MinecraftClient client = MinecraftClient.getInstance();
         SkinPreset preset = getChosenPreset();
-        var skinsetter = SkinShuffleConfig.get().getSkinSetter();
+        SkinShuffleConfig.get();
         var mojangApi = SkinShuffleConfig.get().getUploadSkinAPI();
 
         if (!AuthUtil.isLoggedIn()) {
@@ -183,7 +184,7 @@ public class SkinPresetManager {
 
         try {
             if (preset.getSkin() instanceof UrlSkin urlSkin) {
-                skinsetter.setSkinTexture(urlSkin.getUrl(), urlSkin.getModel());
+                CommandCheck.getCurrentSetter().setSkinTexture(urlSkin.getUrl(), urlSkin.getModel());
             } else {
                 ConfigSkin configSkin = preset.getSkin().saveToConfig();
                 mojangApi.setSkinTexture(configSkin.getFile().toFile(), configSkin.getModel());

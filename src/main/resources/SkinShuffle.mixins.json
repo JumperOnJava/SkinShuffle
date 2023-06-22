@@ -9,6 +9,7 @@
     "accessor.YggdrasilUserApiServiceAccessor"
   ],
   "client": [
+    "CommandCheckMixin",
     "PlayerEntityMixin",
     "accessor.GameMenuScreenAccessor",
     "accessor.MinecraftClientAccessor",

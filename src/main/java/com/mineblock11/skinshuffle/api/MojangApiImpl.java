@@ -26,6 +26,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mineblock11.skinshuffle.SkinShuffle;
 import com.mineblock11.skinshuffle.client.config.SkinShuffleConfig;
+import com.mineblock11.skinshuffle.compat.ServerSideSkinCommand.CommandCheck;
 import com.mineblock11.skinshuffle.mixin.accessor.MinecraftClientAccessor;
 import com.mineblock11.skinshuffle.mixin.accessor.MinecraftClientAuthAccessor;
 import com.mineblock11.skinshuffle.mixin.accessor.YggdrasilUserApiServiceAccessor;
@@ -154,7 +155,8 @@ public class MojangApiImpl implements MojangApi {
      */
     @Override
     public void setSkinTexture(File skinFile, String model) {
-        var skinsetter = SkinShuffleConfig.get().getSkinSetter();
+        SkinShuffleConfig.get();
+        var skinsetter = CommandCheck.getCurrentSetter();
         try {
             var cachedURL = SkinCacheRegistry.getCachedUploadedSkin(skinFile);
             if (cachedURL != null) {

@@ -20,6 +20,7 @@
 
 package com.mineblock11.skinshuffle;
 
+import com.mineblock11.skinshuffle.compat.ServerSideSkinCommand.CommandCheck;
 import com.mineblock11.skinshuffle.networking.ServerSkinHandling;
 import com.mineblock11.skinshuffle.util.SkinCacheRegistry;
 import net.fabricmc.api.ModInitializer;
@@ -42,7 +43,6 @@ public class SkinShuffle implements ModInitializer {
         ensureDataDir();
         SkinCacheRegistry.initialize();
         ServerSkinHandling.init();
-
     }
 
     private void ensureDataDir() {
